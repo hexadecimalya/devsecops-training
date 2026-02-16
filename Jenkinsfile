@@ -1,64 +1,65 @@
 pipeline {
-    agent: any
+    agent any // Removed the colon
 
     environment {
         DOCKER_HUB_USER = 'hexadec1malya'
         DOCKER_HUB_REPO = 'demo-app'
-        EC2_USER = 'ubuntu'
-        EC2_IP = '16.16.162.186'
-        SSH_CRED_ID = 'ec2-ssh-key'
-}
+        EC2_USER        = 'ubuntu'
+        EC2_IP          = '16.16.162.186'
+        SSH_CRED_ID     = 'ec2-ssh-key'
+        DOCKER_CREDS    = 'docker-hub-credentials-id'
+    }
+
     stages {
-        stage('Checkout'){
+        stage('Checkout') {
             steps {
                 checkout scm
             }
         }
-        stage('SAST With Bandit'){
-            steps{
-                script{
-                  // Run scan with Bandit and generate report
-                  sh '''
-                    python3 -m venv bandit_venv
-                    . bandit_venv/bin/activate
-                    pip install --upgrade pip
-                    pip install bandit
 
-                    bandit -r . -f json -o bandit-report.json --exit-zero
-                    bandit -r . -f json -o bandit-report.html --exit-zero
-                    deactivate
+        stage('SAST With Bandit') {
+            steps {
+                script {
+                    sh '''
+                        python3 -m venv bandit_venv
+                        . bandit_venv/bin/activate
+                        pip install --upgrade pip
+                        pip install bandit
+
+                        # Generate JSON for Jenkins to read, and HTML for you to view
+                        bandit -r . -f json -o bandit-report.json --exit-zero
+                        bandit -r . -f html -o bandit-report.html --exit-zero
+                        deactivate
                     '''
-                   //Archive the report as artifact
-                  archiveArtifacts artifacts: 'bandit-report.json, bandit-report.html', allowEmptyArchive: true
 
-                  // Publish HTML Report
+                    archiveArtifacts artifacts: 'bandit-report.json, bandit-report.html', allowEmptyArchive: true
+
+
                     publishHTML(target: [
-                                allowMissing: false,
-                                alwaysLinkToLastBuild: false,
-                                keepAll: true,
-                                reportDir: '.',
-                                reportFiles: 'bandit-report.html',
-                                reportName: 'Bandit Security Report'
-                            ])
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: false,
+                        keepAll: true,
+                        reportDir: '.',
+                        reportFiles: 'bandit-report.html',
+                        reportName: 'Bandit Security Report'
+                    ])
 
-                  // Parse JSON report to check for issues
-                    script {
-                        def jsonReport = readJSON file: 'bandit-report.json'
-                        def issueCount = jsonReport.results.size()
-                        if (issueCount > 0) {
-                            echo "Bandit found ${issueCount} potential security issue(s). Please review the report."
-                        } else {
-                            echo "Bandit scan completed successfully with no issues found."
-                        }
+                    // 4. Parse JSON (Needs Pipeline Utility Steps Plugin)
+                    def jsonReport = readJSON file: 'bandit-report.json'
+                    def issueCount = jsonReport.results.size()
+                    if (issueCount > 0) {
+                        echo "Bandit found ${issueCount} potential security issue(s). Check the tab in Jenkins!"
+                    } else {
+                        echo "Bandit scan completed with no issues."
                     }
                 }
-              }
             }
+        }
+
         stage('Build & Push to Docker Hub') {
             steps {
                 script {
-                    // Log in using Jenkins Docker credentials (you'll need to set these up)
-                    docker.withRegistry('', 'docker-hub-credentials-id') {
+                    docker.withRegistry('', "${DOCKER_CREDS}") {
                         def appImage = docker.build("${DOCKER_HUB_USER}/${DOCKER_HUB_REPO}:${env.BUILD_NUMBER}")
                         appImage.push()
                         appImage.push('latest')
@@ -69,21 +70,17 @@ pipeline {
 
         stage('Deploy to EC2') {
             steps {
-                // This uses the "SSH Agent" plugin to handle your .pem key safely
                 sshagent([SSH_CRED_ID]) {
                     sh """
                     ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} '
                         docker pull ${DOCKER_HUB_USER}/${DOCKER_HUB_REPO}:latest
-                        docker stop flask-app || true
-                        docker rm flask-app || true
-                        docker run -d --name flask-app -p 80:5000 ${DOCKER_HUB_USER}/${DOCKER_HUB_REPO}:latest
+                        docker stop demo-app || true
+                        docker rm demo-app || true
+                        docker run -d --name demo-app -p 80:5000 ${DOCKER_HUB_USER}/${DOCKER_HUB_REPO}:latest
                     '
                     """
                 }
             }
         }
-
-        }
-
     }
 }
