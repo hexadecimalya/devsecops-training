@@ -25,8 +25,8 @@ pipeline {
                         . bandit_venv/bin/activate
                         pip install --upgrade pip
                         pip install bandit
-                        bandit -r . --exclude ./.venv -f json -o bandit-report.json --exit-zero
-                        bandit -r . --exclude ./.venv -f html -o bandit-report.html --exit-zero
+                        bandit -r . --exclude bandit_venv,venv,.venv -f json -o bandit-report.json --exit-zero
+                        bandit -r . --exclude bandit_venv,venv,.venv -f html -o bandit-report.html --exit-zero
                         deactivate
                     '''
 
