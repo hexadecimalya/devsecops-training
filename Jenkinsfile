@@ -25,10 +25,8 @@ pipeline {
                         . bandit_venv/bin/activate
                         pip install --upgrade pip
                         pip install bandit
-
-                        # Generate JSON for Jenkins to read, and HTML for you to view
-                        bandit -r . -f json -o bandit-report.json --exit-zero
-                        bandit -r . -f html -o bandit-report.html --exit-zero
+                        bandit -r . --exclude ./.venv -f json -o bandit-report.json --exit-zero
+                        bandit -r . --exclude ./.venv -f html -o bandit-report.html --exit-zero
                         deactivate
                     '''
 
@@ -44,7 +42,7 @@ pipeline {
                         reportName: 'Bandit Security Report'
                     ])
 
-                    // 4. Parse JSON (Needs Pipeline Utility Steps Plugin)
+                    // 4. Parse JSON
                     def jsonReport = readJSON file: 'bandit-report.json'
                     def issueCount = jsonReport.results.size()
                     if (issueCount > 0) {
