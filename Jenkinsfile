@@ -56,34 +56,44 @@ pipeline {
 //            }
 //        }
 
-//        stage('Build & Push to Docker Hub') {
-//            steps {
-//                script {
-//                    echo "before first docker command"
-//                    docker.withRegistry('', "${DOCKER_CREDS}") {
-//                        def appImage = docker.build("${DOCKER_HUB_USER}/${DOCKER_HUB_REPO}:${env.BUILD_NUMBER}")
-//                        appImage.push()
-//                        appImage.push('latest')
-//                    }
-//                }
-//            }
-//        }
-
         stage('Deploy to EC2') {
             steps {
-                sshagent([SSH_CRED_ID]) {
-                    sh """
-                    ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} '
-                        cd ~/app &&
-                        docker pull ${DOCKER_HUB_USER}/${DOCKER_HUB_REPO}:latest &&
-                        docker build -t ${DOCKER_HUB_REPO}:latest . &&
-                        docker push ${DOCKER_HUB_REPO}:latest &&
-                        docker stop demo-app || true &&
-                        docker rm demo-app || true &&
-                        docker run -d --name demo-app -p 80:5000 ${DOCKER_HUB_USER}/${DOCKER_HUB_REPO}:latest
-                    '
-                    """
-                }
+//                sshagent([SSH_CRED_ID]) {
+//                    sh """
+//                    ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} '
+//                        cd ~/devsecops-training &&
+//                        docker pull ${DOCKER_HUB_USER}/${DOCKER_HUB_REPO}:latest &&
+//                        docker build -t ${DOCKER_HUB_REPO}:latest . &&
+//                        docker push ${DOCKER_HUB_REPO}:latest &&
+//                        docker stop demo-app || true &&
+//                        docker rm demo-app || true &&
+//                        docker run -d --name demo-app -p 80:5000 ${DOCKER_HUB_USER}/${DOCKER_HUB_REPO}:latest
+//                    '
+//                    """
+//                }
+                    sshagent([SSH_CRED_ID]) {
+                        sh """
+                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} '
+                            cd ~/devsecops-training &&
+
+
+                            docker image prune -f &&
+                            docker build --no-cache -t ${DOCKER_HUB_REPO}:latest . &&
+
+                            docker stop demo-app || true &&
+                            docker rm demo-app || true &&
+
+                            docker run -d --name demo-app \
+                                --log-opt max-size=10m \
+                                --log-opt max-file=3 \
+                                -p 80:5000 \
+                                ${DOCKER_HUB_REPO}:latest &&
+
+                            docker system prune -f
+                        '
+                        """
+                    }
+
             }
         }
     }
