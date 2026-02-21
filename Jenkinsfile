@@ -72,12 +72,12 @@ pipeline {
                         ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} '
                             cd ~/devsecops-training &&
                             docker stop demo-app 2>/dev/null || true &&
-                            docker rm demo-app || true &&
+                            docker rm -f demo-app || true &&
                             docker pull ${DOCKER_HUB_USER}/${DOCKER_HUB_REPO}:latest &&
                             docker run -d --name demo-app \
                                 --log-opt max-size=10m \
                                 --log-opt max-file=3 \
-                                -p 80:5000 \
+                                -p 8080:5000 \
                                 ${DOCKER_HUB_REPO}:latest
                         '
                         """
