@@ -78,7 +78,7 @@ pipeline {
                                 --log-opt max-size=10m \
                                 --log-opt max-file=3 \
                                 -p 80:5000 \
-                                ${DOCKER_HUB_REPO}:latest &&
+                                ${DOCKER_HUB_REPO}:latest
                         '
                         """
                     }
