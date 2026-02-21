@@ -6,7 +6,7 @@ pipeline {
         DOCKER_HUB_REPO = 'demo-app'
         EC2_USER        = 'ubuntu'
         EC2_IP          = '16.16.162.186'
-        SSH_CRED_ID     = 'ec2-ssh-key'
+        EC2_SSH_CRED_ID  = 'ec2-ssh-key'
         DOCKER_CREDS    = 'docker-hub-credentials-id'
         TAG             = 'latest'
 
@@ -55,9 +55,16 @@ pipeline {
 //                }
 //            }
 //        }
-
-        stage('Deploy to EC2') {
+        stage('Build on VPS') {
             steps {
+
+                    sh """
+                        touch findme.txt
+                    """
+                }
+        }
+//        stage('Deploy to EC2') {
+//            steps {
 //                sshagent([SSH_CRED_ID]) {
 //                    sh """
 //                    ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} '
@@ -71,30 +78,30 @@ pipeline {
 //                    '
 //                    """
 //                }
-                    sshagent([SSH_CRED_ID]) {
-                        sh """
-                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} '
-                            cd ~/devsecops-training &&
+//                    sshagent([EC2_SSH_CRED_ID]) {
+//                        sh """
+//                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} '
+//                            cd ~/devsecops-training &&
+//
+//
+//                            docker image prune -f &&
+//                            docker build --no-cache -t ${DOCKER_HUB_REPO}:latest . &&
+//
+//                            docker stop demo-app || true &&
+//                            docker rm demo-app || true &&
+//
+//                            docker run -d --name demo-app \
+//                                --log-opt max-size=10m \
+//                                --log-opt max-file=3 \
+//                                -p 80:5000 \
+//                                ${DOCKER_HUB_REPO}:latest &&
+//
+//                            docker system prune -f
+//                        '
+//                        """
+//                    }
 
-
-                            docker image prune -f &&
-                            docker build --no-cache -t ${DOCKER_HUB_REPO}:latest . &&
-
-                            docker stop demo-app || true &&
-                            docker rm demo-app || true &&
-
-                            docker run -d --name demo-app \
-                                --log-opt max-size=10m \
-                                --log-opt max-file=3 \
-                                -p 80:5000 \
-                                ${DOCKER_HUB_REPO}:latest &&
-
-                            docker system prune -f
-                        '
-                        """
-                    }
-
-            }
-        }
+//            }
+//        }
     }
 }
