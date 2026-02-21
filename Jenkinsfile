@@ -60,7 +60,7 @@ pipeline {
             steps {
 
                     sh """
-                        docker build -t ${DOCKER_HUB_REPO}:latest . &&
+                        docker build -t ${DOCKER_HUB_USER}/${DOCKER_HUB_REPO}:latest . &&
                         docker push ${DOCKER_HUB_USER}/${DOCKER_HUB_REPO}:latest
                     """
                 }
