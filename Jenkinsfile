@@ -9,6 +9,7 @@ pipeline {
         EC2_SSH_CRED_ID  = 'ec2-ssh-key'
         DOCKER_CREDS    = 'docker-hub-credentials-id'
         TAG             = 'latest'
+        GIT_CRED_ID     = 'github-demo-token'
 
     }
 
@@ -59,49 +60,30 @@ pipeline {
             steps {
 
                     sh """
-                        touch findme.txt
+                        docker build -t ${DOCKER_HUB_REPO}:latest . &&
+                        docker push ${DOCKER_HUB_REPO}:latest
                     """
                 }
         }
-//        stage('Deploy to EC2') {
-//            steps {
-//                sshagent([SSH_CRED_ID]) {
-//                    sh """
-//                    ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} '
-//                        cd ~/devsecops-training &&
-//                        docker pull ${DOCKER_HUB_USER}/${DOCKER_HUB_REPO}:latest &&
-//                        docker build -t ${DOCKER_HUB_REPO}:latest . &&
-//                        docker push ${DOCKER_HUB_REPO}:latest &&
-//                        docker stop demo-app || true &&
-//                        docker rm demo-app || true &&
-//                        docker run -d --name demo-app -p 80:5000 ${DOCKER_HUB_USER}/${DOCKER_HUB_REPO}:latest
-//                    '
-//                    """
-//                }
-//                    sshagent([EC2_SSH_CRED_ID]) {
-//                        sh """
-//                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} '
-//                            cd ~/devsecops-training &&
-//
-//
-//                            docker image prune -f &&
-//                            docker build --no-cache -t ${DOCKER_HUB_REPO}:latest . &&
-//
-//                            docker stop demo-app || true &&
-//                            docker rm demo-app || true &&
-//
-//                            docker run -d --name demo-app \
-//                                --log-opt max-size=10m \
-//                                --log-opt max-file=3 \
-//                                -p 80:5000 \
-//                                ${DOCKER_HUB_REPO}:latest &&
-//
-//                            docker system prune -f
-//                        '
-//                        """
-//                    }
+        stage('Deploy to EC2') {
+            steps {
+                    sshagent([EC2_SSH_CRED_ID]) {
+                        sh """
+                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} '
+                            cd ~/devsecops-training &&
+                            docker stop demo-app 2>/dev/null || true &&
+                            docker rm demo-app || true &&
+                            docker pull ${DOCKER_HUB_USER}/${DOCKER_HUB_REPO}:latest &&
+                            docker run -d --name demo-app \
+                                --log-opt max-size=10m \
+                                --log-opt max-file=3 \
+                                -p 80:5000 \
+                                ${DOCKER_HUB_REPO}:latest &&
+                        '
+                        """
+                    }
 
-//            }
-//        }
+            }
+        }
     }
 }
